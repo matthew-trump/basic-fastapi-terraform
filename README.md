@@ -75,7 +75,13 @@ curl -i http://127.0.0.1:8011/health
 
 ## Docker
 
-### Build (linux/amd64)
+### Build (local arm64 on Apple Silicon)
+
+```bash
+docker buildx build --platform linux/arm64 -t fastapi-health-ecs:local --load .
+```
+
+### Build (linux/amd64 for cloud)
 
 ```bash
 docker buildx build --platform linux/amd64 -t fastapi-health-ecs:latest .
@@ -84,7 +90,13 @@ docker buildx build --platform linux/amd64 -t fastapi-health-ecs:latest .
 ### Run locally
 
 ```bash
-docker run --rm -p 8011:8011 fastapi-health-ecs:latest
+docker run --rm -p 8011:8011 fastapi-health-ecs:local
+```
+
+### Build and push multi-arch (recommended for ECR)
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -t <ECR_URI> --push .
 ```
 
 ---
