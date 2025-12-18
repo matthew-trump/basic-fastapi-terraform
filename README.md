@@ -2,7 +2,7 @@
 
 A minimal FastAPI application with a single health endpoint, packaged as a Docker image (linux/amd64), pushed to AWS ECR, and deployed to a public-facing ECS service using Terraform in **us-west-2**.
 
-This repo is intentionally small and “Codex-friendly”: build locally, run locally, then deploy the same container to AWS.
+This repo is intentionally small and Codex-friendly: build locally, run locally, then deploy the same container to AWS.
 
 ---
 
@@ -10,38 +10,42 @@ This repo is intentionally small and “Codex-friendly”: build locally, run lo
 
 - Runs a FastAPI app from `app/main.py`
 - Exposes `GET /health` for status checks
-- Runs locally via `uvicorn` on **port 8011**
+- Runs locally via `uvicorn` on port **8011**
 - Builds a Docker image compatible with **linux/amd64**
 - Pushes the image to **AWS ECR**
-- Deploys an **ECS Cluster + Service + Task Definition** reachable from the public internet
+- Deploys an ECS Cluster, Service, and Task Definition reachable from the public internet
 - Configures ingress to allow inbound traffic on **8011**
 - Adds an ECS container health check that calls `GET /health`
 - Uses Terraform for infrastructure
-- Includes a helper script to render `task-def.json` from a template using env vars
+- Includes a helper script to render `task-def.json` from a template using environment variables
 
 ---
 
 ## Repository layout
 
+```
+.
 ├── app/
-│ └── main.py
+│   └── main.py
 ├── requirements.txt
 ├── Dockerfile
 ├── terraform/
-│ ├── main.tf
-│ ├── variables.tf
-│ ├── outputs.tf
-│ └── ...
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   └── ...
 └── scripts/
-├── task-def.template.json
-└── render-task-def.sh
+    ├── task-def.template.json
+    └── render-task-def.sh
+```
 
 ---
 
 ## FastAPI app
 
 ### Endpoint
-- `GET /health` → returns `{ "status": "ok" }`
+
+`GET /health` → `{ "status": "ok" }`
 
 ### Local run (no Docker)
 
@@ -51,84 +55,95 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 uvicorn app.main:app --host 0.0.0.0 --port 8011 --reload
+```
 
 Test:
 
-```curl -i http://127.0.0.1:8011/health```
+```bash
+curl -i http://127.0.0.1:8011/health
+```
+
+---
 
 ## Docker
-### Dockerfile expectations
 
-The container listens on 8011
+### Build (linux/amd64)
 
-The image should be built for linux/amd64
+```bash
+docker buildx build --platform linux/amd64 -t fastapi-health-ecs:latest .
+```
 
-## Build (force linux/amd64)
-```docker buildx build --platform linux/amd64 -t fastapi-health-ecs:latest .```
+### Run locally
 
-## Run locally
-```docker run --rm -p 8011:8011 fastapi-health-ecs:latest```
+```bash
+docker run --rm -p 8011:8011 fastapi-health-ecs:latest
+```
 
-
-Test:
-
-```curl -i http://127.0.0.1:8011/health```
+---
 
 ## AWS + ECR
-### Region
 
-This project targets:
+- Region: **us-west-2**
 
-AWS Region: us-west-2
+Authenticate and push the image to ECR before deploying infrastructure.
 
-Make sure your AWS CLI is configured:
+---
 
-```aws configure```
-```aws sts get-caller-identity```
+## ECS architecture (high level)
 
-### Create / reference ECR repo
+Terraform provisions:
 
-Terraform will typically create the ECR repository (recommended). If you create it manually:
+- ECS Cluster
+- ECS Task Definition (Fargate)
+- ECS Service
+- Networking and security groups
+- Public ingress on port 8011 (direct or via ALB)
 
-```aws ecr create-repository --region us-west-2 --repository-name fastapi-health-ecs```
+---
 
-### Login to ECR
-```aws ecr get-login-password --region us-west-2 \
-  | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com```
+## ECS health check
 
-### Tag + push
-```export ACCOUNT_ID="<your-account-id>"
-export REPO_NAME="fastapi-health-ecs"
-export IMAGE_TAG="latest"
-export ECR_URI="${ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/${REPO_NAME}:${IMAGE_TAG}"
+Example container health check:
 
-docker tag fastapi-health-ecs:latest "${ECR_URI}"
-docker push "${ECR_URI}"
+```json
+"healthCheck": {
+  "command": ["CMD-SHELL", "curl -fsS http://localhost:8011/health || exit 1"],
+  "interval": 30,
+  "timeout": 5,
+  "retries": 3,
+  "startPeriod": 10
+}
 ```
-## Notes for Codex development
 
-Suggested “Codex loop”:
+---
 
-Implement minimal app/main.py and requirements.txt
+## Terraform usage
 
-Confirm uvicorn works locally on 8011
+```bash
+cd terraform
+terraform init
+terraform plan -var="aws_region=us-west-2"
+terraform apply -var="aws_region=us-west-2"
+```
 
-Add Dockerfile and confirm container runs locally
+---
 
-Add Terraform skeleton (ECR + ECS + networking)
+## Task definition rendering
 
-Push image to ECR
+Environment-driven rendering of `task-def.json`:
 
-terraform apply
+```bash
+export AWS_REGION=us-west-2
+export TASK_FAMILY=fastapi-health-ecs
+export CONTAINER_NAME=app
+export CONTAINER_PORT=8011
+export ECR_IMAGE_URI=<account>.dkr.ecr.us-west-2.amazonaws.com/fastapi-health-ecs:latest
 
-Verify:
+./scripts/render-task-def.sh > task-def.json
+```
 
-service is running
-
-endpoint is reachable
-
-ECS health check is passing
+---
 
 ## License
 
-MIT (or choose your preferred license).
+MIT
