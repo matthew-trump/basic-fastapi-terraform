@@ -200,6 +200,15 @@ export ECR_IMAGE_URI=<account>.dkr.ecr.us-west-2.amazonaws.com/fastapi-health-ec
 
 ---
 
+## Operational notes
+
+- If the ALB listener uses port 8011, ensure the ALB security group allows inbound TCP 8011 from the internet (we added this on `sg-047d2a7bbda9dd56d`).
+- If an ALB already exists, import it into Terraform before applying to avoid name conflicts.
+- Before destroying the stack, delete images in the ECR repo or enable `force_delete` to avoid RepositoryNotEmpty errors.
+- ECS service runs in the provided public subnets with `assign_public_ip=true`; the ECS service security group only permits 8011 inbound from the ALB SG.
+
+---
+
 ## License
 
 MIT
