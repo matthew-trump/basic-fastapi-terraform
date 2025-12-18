@@ -189,6 +189,17 @@ export ECR_IMAGE_URI=<account>.dkr.ecr.us-west-2.amazonaws.com/fastapi-health-ec
 
 ---
 
+## AWS Console checklist (us-west-2)
+
+- ECR → Repositories → `fastapi-health-ecs` (image `latest`)
+- ECS → Clusters → `fastapi-health` → Services → `fastapi-health` (1 running task)
+- EC2 → Load Balancers → `fastapi-health-alb` (listener on 8011) and Target Group `fastapi-health-tg`
+- EC2 → Security Groups → `fastapi-health-svc` and ALB SG `sg-047d2a7bbda9dd56d` (ingress 8011/80)
+- IAM → Roles → `fastapi-health-exec`
+- CloudWatch → Log groups → `/ecs/fastapi-health`
+
+---
+
 ## License
 
 MIT
