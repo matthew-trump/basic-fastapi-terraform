@@ -153,11 +153,22 @@ Example container health check:
 
 ## Terraform usage
 
+The ALB security group must allow inbound TCP 8011 from the internet. The ECS service security group is created by Terraform and only allows traffic from the ALB.
+
 ```bash
 cd terraform
 terraform init
-terraform plan -var="aws_region=us-west-2"
-terraform apply -var="aws_region=us-west-2"
+terraform plan \
+  -var="aws_region=us-west-2" \
+  -var="vpc_id=<vpc-id>" \
+  -var='public_subnet_ids=["<subnet-a>","<subnet-b>"]' \
+  -var="alb_security_group_id=<sg-id>"
+
+terraform apply \
+  -var="aws_region=us-west-2" \
+  -var="vpc_id=<vpc-id>" \
+  -var='public_subnet_ids=["<subnet-a>","<subnet-b>"]' \
+  -var="alb_security_group_id=<sg-id>"
 ```
 
 ---
