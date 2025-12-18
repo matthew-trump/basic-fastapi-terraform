@@ -29,6 +29,8 @@ This repo is intentionally small and Codex-friendly: build locally, run locally,
 │   └── main.py
 ├── requirements.txt
 ├── Dockerfile
+├── tests/
+│   └── test_health.py
 ├── terraform/
 │   ├── main.tf
 │   ├── variables.tf
@@ -57,6 +59,12 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8011 --reload
 ```
 
+Or use the `Makefile` target:
+
+```bash
+make run
+```
+
 Test:
 
 ```bash
@@ -77,6 +85,20 @@ docker buildx build --platform linux/amd64 -t fastapi-health-ecs:latest .
 
 ```bash
 docker run --rm -p 8011:8011 fastapi-health-ecs:latest
+```
+
+---
+
+## Testing
+
+Run tests with pytest or the `Makefile` target:
+
+```bash
+python -m pytest
+```
+
+```bash
+make test
 ```
 
 ---
